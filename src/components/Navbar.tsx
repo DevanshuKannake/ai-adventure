@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { MapPin, Compass } from "lucide-react";
+import { MapPin, Compass, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md">
@@ -14,29 +16,45 @@ const Navbar = () => {
           <span className="text-lg font-semibold tracking-tight text-foreground">NomadAI</span>
         </Link>
 
-        <div className="flex items-center gap-1">
+        {user ? (
+          <div className="flex items-center gap-1">
+            <Link
+              to="/"
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                location.pathname === "/"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Plan Trip
+            </Link>
+            <Link
+              to="/my-trips"
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                location.pathname === "/my-trips"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              My Trips
+            </Link>
+            <button
+              onClick={signOut}
+              className="ml-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign Out
+            </button>
+          </div>
+        ) : (
           <Link
-            to="/"
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              location.pathname === "/"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            to="/auth"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-all"
           >
-            Plan Trip
+            Sign In
           </Link>
-          <Link
-            to="/my-trips"
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-              location.pathname === "/my-trips"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <MapPin className="h-3.5 w-3.5" />
-            My Trips
-          </Link>
-        </div>
+        )}
       </div>
     </nav>
   );

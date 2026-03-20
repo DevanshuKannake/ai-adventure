@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      trips: {
+        Row: {
+          budget: string
+          created_at: string
+          days: number
+          destination: string
+          hotels: Json
+          id: string
+          itinerary: Json
+          partner: string
+          trip_name: string
+          user_id: string
+        }
+        Insert: {
+          budget: string
+          created_at?: string
+          days: number
+          destination: string
+          hotels?: Json
+          id?: string
+          itinerary?: Json
+          partner: string
+          trip_name: string
+          user_id: string
+        }
+        Update: {
+          budget?: string
+          created_at?: string
+          days?: number
+          destination?: string
+          hotels?: Json
+          id?: string
+          itinerary?: Json
+          partner?: string
+          trip_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
