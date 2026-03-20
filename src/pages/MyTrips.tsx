@@ -1,29 +1,59 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Wallet, Trash2, ChevronRight } from "lucide-react";
+import { MapPin, Calendar, Wallet, Trash2, ChevronRight, Loader2 } from "lucide-react";
 import type { TripData } from "../components/TripResults";
 import TripResults from "../components/TripResults";
 import { useNavigate } from "react-router-dom";
-
-const SAVED_TRIPS_KEY = "nomadai_trips";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const MyTrips = () => {
-  const [trips, setTrips] = useState<TripData[]>([]);
+  const { user } = useAuth();
+  const [trips, setTrips] = useState<(TripData & { id: string })[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<TripData | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      setTrips(JSON.parse(localStorage.getItem(SAVED_TRIPS_KEY) || "[]"));
-    } catch {
-      setTrips([]);
-    }
-  }, []);
+    if (!user) return;
+    const fetchTrips = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("trips")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-  const handleDelete = (index: number) => {
-    const updated = trips.filter((_, i) => i !== index);
-    setTrips(updated);
-    localStorage.setItem(SAVED_TRIPS_KEY, JSON.stringify(updated));
+      if (error) {
+        toast.error("Failed to load trips.");
+        setTrips([]);
+      } else {
+        setTrips(
+          (data || []).map((t: any) => ({
+            id: t.id,
+            tripName: t.trip_name,
+            destination: t.destination,
+            days: t.days,
+            budget: t.budget,
+            partner: t.partner,
+            hotels: t.hotels as any,
+            itinerary: t.itinerary as any,
+          }))
+        );
+      }
+      setLoading(false);
+    };
+    fetchTrips();
+  }, [user]);
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("trips").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete trip.");
+      return;
+    }
+    setTrips((prev) => prev.filter((t) => t.id !== id));
   };
 
   if (selectedTrip) {
@@ -39,13 +69,19 @@ const MyTrips = () => {
       <header className="space-y-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">My Trips</h1>
         <p className="text-muted-foreground leading-relaxed">
-          {trips.length === 0
-            ? "No trips planned yet. Start by defining your destination."
-            : `${trips.length} saved ${trips.length === 1 ? "trip" : "trips"}`}
+          {loading
+            ? "Loading your trips…"
+            : trips.length === 0
+              ? "No trips planned yet. Start by defining your destination."
+              : `${trips.length} saved ${trips.length === 1 ? "trip" : "trips"}`}
         </p>
       </header>
 
-      {trips.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : trips.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -64,7 +100,7 @@ const MyTrips = () => {
         <div className="space-y-3">
           {trips.map((trip, i) => (
             <motion.div
-              key={i}
+              key={trip.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
@@ -92,7 +128,7 @@ const MyTrips = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDelete(i);
+                    handleDelete(trip.id);
                   }}
                   className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 >

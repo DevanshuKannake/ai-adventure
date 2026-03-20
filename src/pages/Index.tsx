@@ -5,8 +5,10 @@ import LoadingSkeleton from "../components/LoadingSkeleton";
 import type { TripFormData } from "../components/TripForm";
 import type { TripData } from "../components/TripResults";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-// Mock AI generation (will be replaced with Lovable Cloud edge function)
+// Mock AI generation (will be replaced with Gemini edge function)
 const generateMockTrip = (form: TripFormData): TripData => {
   const budgetPriceMap: Record<string, string> = {
     budget: "$40–80/night",
@@ -75,17 +77,8 @@ const generateMockTrip = (form: TripFormData): TripData => {
   };
 };
 
-const SAVED_TRIPS_KEY = "nomadai_trips";
-
-const getSavedTrips = (): TripData[] => {
-  try {
-    return JSON.parse(localStorage.getItem(SAVED_TRIPS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
-
 const Index = () => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [tripResult, setTripResult] = useState<TripData | null>(null);
   const [isSaved, setIsSaved] = useState(false);
@@ -109,14 +102,27 @@ const Index = () => {
     }
   }, []);
 
-  const handleSave = useCallback(() => {
-    if (!tripResult) return;
-    const trips = getSavedTrips();
-    trips.unshift(tripResult);
-    localStorage.setItem(SAVED_TRIPS_KEY, JSON.stringify(trips));
-    setIsSaved(true);
-    toast.success("Trip saved to My Trips.");
-  }, [tripResult]);
+  const handleSave = useCallback(async () => {
+    if (!tripResult || !user) return;
+
+    try {
+      const { error } = await supabase.from("trips").insert({
+        user_id: user.id,
+        trip_name: tripResult.tripName,
+        destination: tripResult.destination,
+        days: tripResult.days,
+        budget: tripResult.budget,
+        partner: tripResult.partner,
+        hotels: tripResult.hotels as any,
+        itinerary: tripResult.itinerary as any,
+      });
+      if (error) throw error;
+      setIsSaved(true);
+      toast.success("Trip saved to My Trips.");
+    } catch {
+      toast.error("Failed to save trip.");
+    }
+  }, [tripResult, user]);
 
   const handleBack = useCallback(() => {
     setTripResult(null);
