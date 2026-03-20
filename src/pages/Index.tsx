@@ -1,16 +1,139 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useCallback } from "react";
+import TripForm from "../components/TripForm";
+import TripResults from "../components/TripResults";
+import LoadingSkeleton from "../components/LoadingSkeleton";
+import type { TripFormData } from "../components/TripForm";
+import type { TripData } from "../components/TripResults";
+import { toast } from "sonner";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+// Mock AI generation (will be replaced with Lovable Cloud edge function)
+const generateMockTrip = (form: TripFormData): TripData => {
+  const budgetPriceMap: Record<string, string> = {
+    budget: "$40–80/night",
+    moderate: "$100–200/night",
+    luxury: "$300–600/night",
+  };
+
+  return {
+    tripName: `${form.destination} — ${form.days}-Day ${form.budget.charAt(0).toUpperCase() + form.budget.slice(1)} Trip`,
+    destination: form.destination,
+    days: form.days,
+    budget: form.budget,
+    partner: form.partner,
+    hotels: [
+      {
+        name: `Grand ${form.destination.split(",")[0]} Hotel`,
+        price: budgetPriceMap[form.budget] || "$100–200/night",
+        rating: 4.5,
+        description: `A well-rated hotel in the heart of ${form.destination} with excellent amenities and central location.`,
+      },
+      {
+        name: `${form.destination.split(",")[0]} Boutique Stay`,
+        price: budgetPriceMap[form.budget] || "$100–200/night",
+        rating: 4.3,
+        description: `Charming boutique accommodation with local character and modern comforts.`,
+      },
+      {
+        name: `The ${form.destination.split(",")[0]} Residence`,
+        price: budgetPriceMap[form.budget] || "$100–200/night",
+        rating: 4.7,
+        description: `Premium residence offering spacious rooms and top-tier service.`,
+      },
+    ],
+    itinerary: Array.from({ length: form.days }, (_, i) => ({
+      day: i + 1,
+      theme: i === 0 ? "Arrival & Orientation" : i === form.days - 1 ? "Departure Day" : `Exploration Day ${i + 1}`,
+      activities: [
+        {
+          time: "09:00",
+          task: i === 0 ? "Check-in & settle" : "Morning activity",
+          description: i === 0
+            ? `Arrive at your hotel in ${form.destination}. Freshen up and get oriented with the neighborhood.`
+            : `Start the day exploring local highlights of ${form.destination}.`,
+        },
+        {
+          time: "12:30",
+          task: "Lunch",
+          description: `Enjoy a ${form.budget === "luxury" ? "fine dining" : "local"} lunch experience.`,
+        },
+        {
+          time: "14:00",
+          task: i === form.days - 1 ? "Pack & checkout" : "Afternoon exploration",
+          description: i === form.days - 1
+            ? "Pack your bags and check out. Head to the airport or station."
+            : `Visit key attractions and immerse in the local culture of ${form.destination}.`,
+        },
+        {
+          time: "19:00",
+          task: "Evening",
+          description: i === form.days - 1
+            ? "Safe travels home!"
+            : `Dinner and evening stroll through ${form.destination.split(",")[0]}.`,
+        },
+      ],
+    })),
+  };
+};
+
+const SAVED_TRIPS_KEY = "nomadai_trips";
+
+const getSavedTrips = (): TripData[] => {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_TRIPS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+
+const Index = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [tripResult, setTripResult] = useState<TripData | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const handleSubmit = useCallback(async (data: TripFormData) => {
+    setIsLoading(true);
+    setTripResult(null);
+    setIsSaved(false);
+
+    // Simulate AI generation delay
+    await new Promise((r) => setTimeout(r, 2000));
+
+    try {
+      const trip = generateMockTrip(data);
+      setTripResult(trip);
+      toast.success("Itinerary generated. You're ready to go.");
+    } catch {
+      toast.error("Failed to generate itinerary. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleSave = useCallback(() => {
+    if (!tripResult) return;
+    const trips = getSavedTrips();
+    trips.unshift(tripResult);
+    localStorage.setItem(SAVED_TRIPS_KEY, JSON.stringify(trips));
+    setIsSaved(true);
+    toast.success("Trip saved to My Trips.");
+  }, [tripResult]);
+
+  const handleBack = useCallback(() => {
+    setTripResult(null);
+    setIsSaved(false);
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : tripResult ? (
+        <TripResults trip={tripResult} onBack={handleBack} onSave={handleSave} isSaved={isSaved} />
+      ) : (
+        <TripForm onSubmit={handleSubmit} isLoading={isLoading} />
+      )}
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
